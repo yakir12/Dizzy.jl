@@ -1,0 +1,69 @@
+{
+    "type": "array",
+    "minItems": 1,
+    "maxItems": 9,
+    "items": {
+        "type": "object",
+        "required": ["name", "suns"],
+        "additionalProperties": false,
+        "properties": {
+            "name":  { "type": "string", "minLength": 1 },
+            "suns":  {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 150,
+                "items": {
+                    "type": "object",
+                    "required": ["mu"],
+                    "additionalProperties": false,
+                    "dependencies": {
+                        "kappa": ["az_interval"],
+                        "az_interval": ["kappa"],
+                        "int_delay": ["int_interval"],
+                        "az_delay": ["az_interval"]
+                    },
+                    "properties": {
+                        "green": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 255
+                        },
+                        "int_delay": {
+                            "type": "number",
+                            "minimum": 0,
+                            "multipleOf": 0.01
+                        },
+                        "int_interval": {
+                            "type": "number",
+                            "minimum": 0.01,
+                            "multipleOf": 0.01
+                        },
+                        "mu": {
+                            "type": "number",
+                            "minimum": -180,
+                            "maximum": 180,
+                            "exclusiveMaximum": true
+                        },
+                        "kappa": {
+                            "type": "number",
+                            "minimum": 0,
+                            "exclusiveMinimum": true
+                        },
+                        "az_delay": {
+                            "type": "number",
+                            "minimum": 0,
+                            "multipleOf": 0.01
+                        },
+                        "az_interval": {
+                            "type": "number",
+                            "minimum": 0.01,
+                            "multipleOf": 0.01
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+

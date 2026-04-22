@@ -10,7 +10,7 @@ using Dates
 using BeepBeep
 using IterTools
 
-const NLEDS = 150
+const NLEDS = 198
 
 const schema = Schema(read(joinpath(@__DIR__, "schema.json"), String))
 

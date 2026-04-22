@@ -3,8 +3,8 @@
 
 PacketSerial_<COBS, 0, 512> myPacketSerial;
 
-#define NLEDS     150
-#define NSUNS_MAX 150
+#define NLEDS     198
+#define NSUNS_MAX 198
 #define DATA_PIN  10
 #define CLOCK_PIN 11
 #define BAUDRATE  115200

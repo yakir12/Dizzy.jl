@@ -11,7 +11,7 @@
             "suns":  {
                 "type": "array",
                 "minItems": 1,
-                "maxItems": 150,
+                "maxItems": 198,
                 "items": {
                     "type": "object",
                     "required": ["mu"],

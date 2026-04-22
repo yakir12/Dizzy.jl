@@ -1,0 +1,12 @@
+# Changes here will be overwritten by Copier
+Authors: Yakir Gagnon <12.yakir@gmail.com>
+JuliaMinVersion: '1.10'
+License: MIT
+LicenseCopyrightHolders: Yakir Gagnon
+PackageName: Dizzy
+PackageOwner: yakir12
+PackageUUID: f169f678-d33f-5be4-9f47-7f18635f7f76
+StrategyConfirmIncluded: false
+StrategyLevel: 0
+StrategyReviewExcluded: false
+_src_path: /home/yakir/.julia/packages/BestieTemplate/6QVd6

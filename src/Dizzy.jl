@@ -10,9 +10,35 @@ using Dates
 using BeepBeep
 using IterTools
 
+export load_start
+
 const NLEDS = 198
 
 const schema = Schema(read(joinpath(@__DIR__, "schema.json"), String))
+
+function get_sp_name()
+    sp_names = get_port_list()
+    if isempty(sp_names)
+        error("no serial ports found, make sure the USB is plugged in.")
+    end
+    last(sp_names)
+end
+
+const sp = Ref{SerialPort}()
+
+function __init__() 
+    sp_name = get_sp_name()
+    sp[] = open(sp_name, 115200; mode = SP_MODE_WRITE)
+end
+
+mutable struct Sun
+    azimuth::UInt8
+    intensity::UInt8
+end
+
+function suns2msg(suns::Vector{Sun})
+    foldl((msg, s) -> UInt8[s.azimuth; s.intensity; msg], sun for sun in suns if sun.intensity > 0, init = UInt8[])
+end
 
 @defaults struct JSUN
     mu::Float64
@@ -45,11 +71,11 @@ struct Azimuth <: Operation
 end
 
 function update!(suns, op::Azimuth)
-    suns[op.index][2] = α2index(rand(op.dist))
+    suns[op.index].azimuth = α2index(rand(op.dist))
 end
 
 function update!(suns, op::Intensity)
-    suns[op.index][3] ⊻= op.green
+    suns[op.index].intensity ⊻= op.green
 end
 
 struct Session
@@ -58,21 +84,20 @@ struct Session
 end
 
 function Session(setup::Setup)
-    sp_name = get_sp_name()
     jsuns = setup.suns
-    suns = [UInt8[i - 1, α2index(deg2rad(jsun.mu)), jsun.green] for (i, jsun) in enumerate(jsuns)]
+    suns = [Sun(α2index(deg2rad(jsun.mu)), jsun.green) for jsun in jsuns]
     running = Ref(true)
-    task = Threads.@spawn open(sp_name, 115200; mode = SP_MODE_WRITE) do sp
-        write(sp, cobs_encode(vcat(suns...)))
-        # sleep(1)
+    task = Threads.@spawn begin
         last_t = 0.0
         dt = round(now(), Second(1))
         open("$dt $(setup.name).log", "w") do io
             println(io, "datetime,id,azimuth,intensity")
+            write(sp[], cobs_encode(suns2msg(suns)))
+            log!(io, suns)
             if !all(s -> isinf(s.az_interval) && isinf(s.int_interval) && isinf(s.kappa), jsuns)
                 gm = gridded_merge_int(jsuns)
                 for (t, operations) in gm
-                    Threads.@spawn light(operations, suns, sp, io)
+                    Threads.@spawn light(operations, suns, io, running)
                     sleep(t - last_t)
                     last_t = t
                     running[] || break
@@ -85,7 +110,6 @@ end
 
 function switch(session, setup)
     off(session)
-    # Threads.@spawn beep(1)
     println("setup $(setup.name) is on")
     Session(setup)
 end
@@ -93,12 +117,8 @@ end
 function off(session)
     session.running[] = false
     wait(session.task)
-    sp_name = get_sp_name()
-    open(sp_name, 115200; mode = SP_MODE_WRITE) do sp
-        msg = zeros(UInt8, 3NLEDS)
-        msg[1:3:end] .= 0:NLEDS - 1
-        write(sp, cobs_encode(msg))
-    end
+    sp_drain(sp[])
+    write(sp[], cobs_encode(UInt8[]))
 end
 
 
@@ -125,7 +145,8 @@ function gridded_merge_int(jsuns::AbstractVector{JSUN})
     gridded_merge_int(starts, steps, operations)
 end
 
-α2index(α) = round(UInt8, clamp(NLEDS*((α + π)/2π) - 0.5, 0, NLEDS - 1))
+α2index(α) = round(UInt8, clamp(NLEDS*(rem(α + π + π/2, 2π)/2π) - 0.5, 0, NLEDS - 1))
+# α2index(α) = round(UInt8, clamp(NLEDS*((α + π)/2π) - 0.5, 0, NLEDS - 1))
 
 index2α(i) = 360*(i + 0.5)/NLEDS - 180
 
@@ -139,28 +160,25 @@ function readkey()
     end
 end
 
-function light(operations, suns, sp, io)
-    ids = Set{Int}()
+function log!(io, suns)
+    dt = now()
+    for (id, sun) in enumerate(suns)
+        println(io, dt, ",", id, ",", index2α(sun.azimuth), ",", sun.intensity) 
+    end
+end
+
+function light(operations, suns, io, running)
     for operation in operations
         update!(suns, operation)
-        push!(ids, operation.index)
     end
-    msg = (suns[i] for i in ids)
-    write(sp, cobs_encode(vcat(msg...)))
-    dt = now()
-    for (id, azimuth, intensity) in msg
-        println(io, dt, ",", id + 1, ",", index2α(azimuth), ",", intensity) 
+    write(sp[], cobs_encode(suns2msg(suns)))
+    log!(io, suns)
+    if !running[]
+        sp_drain(sp[])
+        write(sp[], cobs_encode(UInt8[]))
     end
 end
 
-
-function get_sp_name()
-    sp_names = get_port_list()
-    if isempty(sp_names)
-        error("no serial ports found, make sure the USB is plugged in.")
-    end
-    last(sp_names)
-end
 
 
 function load_start(file = joinpath(homedir(), "setups.json"), beep = false)
@@ -176,7 +194,7 @@ function load_start(file = joinpath(homedir(), "setups.json"), beep = false)
 
     setups['0'] = Setup("off", [JSUN(index2α(i - 1), 0x00) for i in 1:NLEDS])
     setups['s'] = Setup("sync", [JSUN(index2α(i - 1), 0xff, 0, 1) for i in 1:NLEDS])
-    setups['r'] = Setup("rand", [JSUN(rand(-180:180), rand(UInt8), round.(max.(rand(5), 0.01), digits=2)...) for _ in 1:NLEDS])
+    setups['r'] = Setup("rand", [JSUN(rand(-180:180), rand(UInt8), max.(round.(rand(5), digits=2), 0.01)...) for _ in 1:NLEDS])
 
     println("ready…")
     session = Session(setups['0'])

@@ -148,7 +148,8 @@ end
 α2index(α) = round(UInt8, clamp(NLEDS*(rem(α + π + π/2, 2π)/2π) - 0.5, 0, NLEDS - 1))
 # α2index(α) = round(UInt8, clamp(NLEDS*((α + π)/2π) - 0.5, 0, NLEDS - 1))
 
-index2α(i) = 360*(i + 0.5)/NLEDS - 180
+index2α(i) = rad2deg(rem2pi(2π*(i + 0.5)/NLEDS - (π + π/2), RoundNearest))
+# index2α(i) = 360*(i + 0.5)/NLEDS - 180
 
 
 function readkey()

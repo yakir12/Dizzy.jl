@@ -16,6 +16,25 @@ const NLEDS = 198
 
 const schema = Schema(read(joinpath(@__DIR__, "schema.json"), String))
 
+const sp = Ref{SerialPort}()
+
+function open_sp!(sp_name = get_sp_name(); retries = 5, delay = 0.5)
+    for attempt in 1:retries
+        try
+            sp[] = open(sp_name, 115200; mode = SP_MODE_WRITE)
+            return
+        catch e
+            attempt == retries && rethrow()
+            sleep(delay)
+        end
+    end
+end
+
+function close_sp!()
+    isassigned(sp) && isopen(sp[]) && close(sp[])
+end
+
+
 function get_sp_name()
     sp_names = get_port_list()
     if isempty(sp_names)
@@ -24,12 +43,6 @@ function get_sp_name()
     last(sp_names)
 end
 
-const sp = Ref{SerialPort}()
-
-function __init__() 
-    sp_name = get_sp_name()
-    sp[] = open(sp_name, 115200; mode = SP_MODE_WRITE)
-end
 
 mutable struct Sun
     azimuth::UInt8
@@ -180,14 +193,11 @@ function light(operations, suns, io, running)
     end
 end
 
-
-
-function load_start(file = joinpath(homedir(), "setups.json"), beep = false)
+function file2setups(file)
     pre_setups = JSON.parsefile(file)
     res = JSONSchema.validate(schema, pre_setups)
     if !isnothing(res)
-        println(res)
-        return nothing
+        error(res)
     end
     setups = Dict(zip('1':'9', StructUtils.make(Vector{Setup}, pre_setups)))
     available_setups = ["$k: $(setup.name)" for (k, setup) in setups]
@@ -197,13 +207,19 @@ function load_start(file = joinpath(homedir(), "setups.json"), beep = false)
     setups['s'] = Setup("sync", [JSUN(index2α(i - 1), 0xff, 0, 1) for i in 1:NLEDS])
     setups['r'] = Setup("rand", [JSUN(rand(-180:180), rand(UInt8), max.(round.(rand(5), digits=2), 0.01)...) for _ in 1:NLEDS])
 
+    return setups, available_setups
+end
+
+function load_start(file = joinpath(homedir(), "setups.json"); sound = false)
+    setups, available_setups = file2setups(file)
+    open_sp!()
     println("ready…")
     session = Session(setups['0'])
     while true
         c = readkey()
         if haskey(setups, c)
             session = switch(session, setups[c])
-            beep && Threads.@spawn beep(1)
+            sound && Threads.@spawn beep(1)
         elseif c == 'q'
             switch(session, setups['0'])
             off(session)
@@ -211,16 +227,17 @@ function load_start(file = joinpath(homedir(), "setups.json"), beep = false)
             break
         else
             @warn """there is no setup for key "$c". Available setups are:""" available_setups
-            beep && Threads.@spawn beep(9)
+            sound && Threads.@spawn beep(9)
         end
     end
+    close_sp!()
 end
 
 
 # function (@main)(ARGS)
 #     file = length(ARGS) ≥ 1 ? ARGS[1] : joinpath(homedir(), "setups.json")
-#     beep = length(ARGS) ≥ 2 ? parse(Bool, ARGS[2]) : false
-#     load_start(file, beep)
+#     sound = length(ARGS) ≥ 2 ? parse(Bool, ARGS[2]) : false
+#     load_start(file, sound)
 #     return 0
 # end
 

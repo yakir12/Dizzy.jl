@@ -4,3 +4,4 @@
 
 For an explantion of how FWHM of a Von Mises distribution is related to its kappa see [this figure](docs/fwhm%20and%20kappa/fwhm%20and%20kappa.png).
 For an explantion of how the azimuths relate to the layout of the room and tent see [this figure](docs/room%20layout/azimuths.png).
+Please move/remove the `.log` files to your computer so that the Raspberry Pi doesn't get full of them.

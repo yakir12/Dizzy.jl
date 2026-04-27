@@ -3,3 +3,4 @@
 [![BestieTemplate](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JuliaBesties/BestieTemplate.jl/main/docs/src/assets/badge.json)](https://github.com/JuliaBesties/BestieTemplate.jl)
 
 For an explantion of how FWHM of a Von Mises distribution is related to its kappa see [this figure](docs/fwhm%20and%20kappa/fwhm%20and%20kappa.png).
+For an explantion of how the azimuths relate to the layout of the room and tent see [this figure](docs/room%20layout/azimuths.png).

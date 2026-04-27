@@ -2,6 +2,7 @@
 *.jl.cov
 *.jl.mem
 *.rej
+*.png
 .DS_Store
 .benchmarkci
 Manifest.toml

@@ -40,11 +40,11 @@ Each entry in `suns` represents one light source aimed at a fixed angular positi
 |----------------|---------|---------|-------------|
 | `mu`           | number  | —       | **Required.** Angular position in degrees. Range: `[-180, 180)`. 0 = top, 90 = right, -90 = left, -180 = bottom. |
 | `green`        | integer | `255`   | Brightness (1–255). |
-| `int_interval` | number  | Inf     | Blink period in seconds. If set, the light toggles on/off repeatedly. |
-| `int_delay`    | number  | `0`     | Seconds to wait before the first blink toggle. Requires `int_interval`. |
+| `int_interval` | number  | Inf     | Blink period in seconds. Minimum 0.01; must be a multiple of 0.01. If set, the light toggles on/off repeatedly. |
+| `int_delay`    | number  | `0`     | Seconds to wait before the first blink toggle. Must be a multiple of 0.01. Requires `int_interval`. |
 | `kappa`        | number  | Inf     | Concentration of the azimuth distribution (must be > 0). Higher = tighter around `mu`. Requires `az_interval`. |
-| `az_interval`  | number  | Inf     | How often (in seconds) to pick a new random azimuth angle. Requires `kappa`. |
-| `az_delay`     | number  | `0`     | Seconds to wait before the first azimuth update. Requires `az_interval`. |
+| `az_interval`  | number  | Inf     | How often (in seconds) to pick a new random azimuth angle. Minimum 0.01; must be a multiple of 0.01. Requires `kappa`. |
+| `az_delay`     | number  | `0`     | Seconds to wait before the first azimuth update. Must be a multiple of 0.01. Requires `az_interval`. |
 
 No other fields are allowed.
 
@@ -114,7 +114,7 @@ Use `int_delay` to wait before the first toggle. `int_delay` requires `int_inter
 
 ### Multiple suns in one setup
 
-Each sun gets a unique device ID based on its position in the array (first sun = device 0, second = device 1, etc.). Up to 198 suns per setup.
+Each sun gets a unique device ID based on its position in the array (first sun = device 1, second = device 2, etc.). Up to 198 suns per setup.
 
 ```json
 [
@@ -212,4 +212,14 @@ Only the keys `1`–`9` are available (9 keys). A 10th setup would be silently u
 ```json
 {"name": "", "suns": [...]}   // INVALID
 {"name": "x", "suns": [...]}  // correct
+```
+
+### Interval and delay values must be multiples of 0.01
+
+All timing fields (`int_interval`, `az_interval`, `int_delay`, `az_delay`) are quantised to 10 ms precision. Values that are not multiples of 0.01 are rejected.
+
+```json
+{"mu": 0, "int_interval": 0.001}  // INVALID — not a multiple of 0.01
+{"mu": 0, "int_interval": 1.005}  // INVALID — not a multiple of 0.01
+{"mu": 0, "int_interval": 1.0}    // correct
 ```

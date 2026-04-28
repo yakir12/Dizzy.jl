@@ -1,8 +1,22 @@
-# # in a env that includes Dizzy (and PackageCompiler)
+# ## Precompiled system image
+#
+# To eliminate startup latency, you can build a precompiled system image with [PackageCompiler.jl](https://github.com/JuliaLang/PackageCompiler.jl). The `docs/precompiled.jl` script exercises the package so the compiler can record what to precompile. Run this once (with the Arduino connected):
+#
+# ```julia
 # using PackageCompiler
-# PackageCompiler.create_sysimage(["Dizzy"]; sysimage_path="DizzyPrecompiled.so", precompile_execution_file="~/Dizzy/docs/precompiled.jl")
-# then start julia like this:
-# julia -JDizzyPrecompiled.so
+# PackageCompiler.create_sysimage(
+#     ["Dizzy"];
+#     sysimage_path = "DizzyPrecompiled.so",
+#     precompile_execution_file = "docs/precompiled.jl"
+# )
+# ```
+#
+# Then start Julia with the image:
+#
+# ```
+# julia --project=. -JDizzyPrecompiled.so
+# ```
+
 
 using Dizzy
 

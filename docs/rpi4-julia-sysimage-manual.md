@@ -68,7 +68,7 @@ NOTE: I have done this!
 ## 3. Instantiate the project — 📦 CONTAINER
 
 ```bash
-cd /work/path/to/your/project            # the dir with Project.toml
+cd # where you'll have down access to both a Project.toml file as well as the Dizzy.jl folder
 julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
 julia --project=. -e 'using Pkg; Pkg.add("PackageCompiler")'
 ```

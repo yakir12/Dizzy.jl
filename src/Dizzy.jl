@@ -12,35 +12,36 @@ using IterTools
 
 export load_start
 
+const ARDUINO_ID = UInt8[151, 152, 146, 82, 39, 59, 146, 254]
+
 const NLEDS = 198
 
 const schema = Schema(read(joinpath(@__DIR__, "schema.json"), String))
 
 const sp = Ref{SerialPort}()
 
-function open_sp!(sp_name = get_sp_name(); retries = 5, delay = 0.5)
-    for attempt in 1:retries
-        try
-            sp[] = open(sp_name, 115200; mode = SP_MODE_WRITE)
-            return
-        catch e
-            attempt == retries && rethrow()
-            sleep(delay)
-        end
-    end
-end
-
 function close_sp!()
     isassigned(sp) && isopen(sp[]) && close(sp[])
 end
 
-
-function get_sp_name()
+function open_correct_arduino()
     sp_names = get_port_list()
     if isempty(sp_names)
         error("no serial ports found, make sure the USB is plugged in.")
     end
-    last(sp_names)
+    for sp_name in sp_names
+        temp_sp = open(sp_name, 115200)
+        write(temp_sp, cobs_encode(UInt8[1]))
+        sleep(0.1)
+        id = cobs_decode(read(temp_sp))
+        if id == ARDUINO_ID
+            sp[] = temp_sp
+            return nothing
+        end
+        close(temp_sp)
+        @info "Tried $sp_name... It wasn't the Dizzy arduino."
+    end
+    error("the dizzy arduino is not plugged in")
 end
 
 
@@ -212,7 +213,7 @@ end
 
 function load_start(file = joinpath(homedir(), "setups.json"); sound = false)
     setups, available_setups = file2setups(file)
-    open_sp!()
+    open_correct_arduino()
     println("ready…")
     session = Session(setups['0'])
     while true

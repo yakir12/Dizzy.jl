@@ -24,11 +24,19 @@ The depot path inside the container must match where the depot will live on
 the Pi, otherwise paths baked in via `@__DIR__` / `pathof()` (e.g. BeepBeep's
 `sounddir`) will be wrong.
 
+Note: since I've done step 2. this can be replaced
 ```bash
 podman run --rm -it --platform=linux/arm64 \
   -v "$PWD":/work:Z -w /work \
   -e JULIA_DEPOT_PATH=/home/pi/.julia \
   docker.io/library/julia:1.12 bash
+```
+with this:
+```bash
+podman run --rm -it --platform=linux/arm64 \
+  -v "$PWD":/work:Z -w /work \
+  -e JULIA_DEPOT_PATH=/home/pi/.julia \
+  julia-aarch64-build bash
 ```
 
 You're now in an emulated aarch64 shell — every command from here through
@@ -54,6 +62,8 @@ podman commit <id> julia-aarch64-build
 ```
 
 Future runs use `julia-aarch64-build` instead of `docker.io/library/julia:1.12`.
+
+NOTE: I have done this!
 
 ## 3. Instantiate the project — 📦 CONTAINER
 

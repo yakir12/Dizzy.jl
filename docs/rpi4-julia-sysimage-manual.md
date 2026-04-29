@@ -3,7 +3,13 @@
 Cross-compile a Julia sysimage for aarch64 (Pi 4) on an x86_64 Linux box using
 Podman + qemu user-mode emulation. Tested with Julia 1.12.6.
 
-## Prerequisites
+Each step below is tagged with where it runs:
+
+- 🖥️  **HOST** — your x86_64 Linux machine
+- 📦 **CONTAINER** — the emulated aarch64 shell running on the host
+- 🍓 **PI** — the Raspberry Pi 4
+
+## Prerequisites — 🖥️ HOST
 
 ```bash
 sudo apt install podman qemu-user-static
@@ -12,7 +18,7 @@ podman run --rm --privileged docker.io/tonistiigi/binfmt --install arm64
 
 The `binfmt --install arm64` is one-time per host.
 
-## 1. Start an aarch64 container with the right depot path
+## 1. Start an aarch64 container — 🖥️ HOST
 
 The depot path inside the container must match where the depot will live on
 the Pi, otherwise paths baked in via `@__DIR__` / `pathof()` (e.g. BeepBeep's
@@ -25,9 +31,10 @@ podman run --rm -it --platform=linux/arm64 \
   docker.io/library/julia:1.12 bash
 ```
 
-You're now in an emulated aarch64 shell.
+You're now in an emulated aarch64 shell — every command from here through
+step 5 runs **inside the container**.
 
-## 2. One-time setup inside the container
+## 2. One-time setup — 📦 CONTAINER
 
 ```bash
 mkdir -p /home/pi/.julia
@@ -38,7 +45,7 @@ apt update && apt install -y gcc
 and the official `julia` image doesn't ship one.
 
 Optional but worth it if you'll iterate — commit this state to a reusable
-image so you don't redo apt every session. From the **host**, in another
+image so you don't redo apt every session. From the **🖥️ HOST**, in another
 terminal:
 
 ```bash
@@ -48,7 +55,7 @@ podman commit <id> julia-aarch64-build
 
 Future runs use `julia-aarch64-build` instead of `docker.io/library/julia:1.12`.
 
-## 3. Instantiate the project
+## 3. Instantiate the project — 📦 CONTAINER
 
 ```bash
 cd /work/path/to/your/project            # the dir with Project.toml
@@ -58,31 +65,34 @@ julia --project=. -e 'using Pkg; Pkg.add("PackageCompiler")'
 
 This pulls aarch64 JLL artifacts. First run takes a few minutes.
 
-## 4. Generate precompile statements on the Pi
+## 4. Generate precompile statements — 🍓 PI, then 🖥️ HOST
 
 Skip baking *execution* into the build — hardware-touching code
 (LibSerialPort, GPIO, etc.) won't run correctly under qemu. Instead, capture
 compile traces from a real run on the Pi and feed those statements to the
 build.
 
-**On the Pi**, with the same Julia version (1.12.6):
+### 4a. 🍓 PI — generate the trace
+
+With the same Julia version (1.12.6) installed on the Pi:
 
 ```bash
 julia --project=/path/to/project --trace-compile=stmts.jl docs/precompiled.jl
 ```
 
-Then copy `stmts.jl` back to your host:
+### 4b. 🖥️ HOST — pull the trace back
 
 ```bash
 scp pi@<pi-host>:~/stmts.jl /work/path/to/project/
 ```
 
+(`/work` here is the directory you bind-mounted in step 1, so the file lands
+where the container can see it.)
+
 Regenerate `stmts.jl` only when your code paths change meaningfully — not
 every build.
 
-## 5. Build the sysimage
-
-Back inside the container:
+## 5. Build the sysimage — 📦 CONTAINER
 
 ```bash
 julia --project=. -e '
@@ -97,15 +107,20 @@ create_sysimage(["Dizzy"];
 Expect this to be slow under emulation — tens of minutes is normal.
 
 The `.so` ends up on your host filesystem via the bind mount, no copy needed.
+You can now `exit` the container.
 
-## 6. Deploy to the Pi
+## 6. Deploy to the Pi — 🖥️ HOST, then 🍓 PI
+
+### 6a. 🖥️ HOST — ship the sysimage
 
 ```bash
 scp DizzyPrecompiled.so pi@<pi-host>:/path/to/project/
 ```
 
-On the Pi, make sure the project is instantiated (so package data files like
-`BeepBeep/sounds/beep.wav` exist on disk):
+### 6b. 🍓 PI — instantiate (once) and run
+
+Make sure the project is instantiated so package data files like
+`BeepBeep/sounds/beep.wav` exist on disk:
 
 ```bash
 julia --project=/path/to/project -e 'using Pkg; Pkg.instantiate()'

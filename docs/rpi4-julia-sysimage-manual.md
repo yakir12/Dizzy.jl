@@ -24,19 +24,11 @@ The depot path inside the container must match where the depot will live on
 the Pi, otherwise paths baked in via `@__DIR__` / `pathof()` (e.g. BeepBeep's
 `sounddir`) will be wrong.
 
-Note: since I've done step 2. this can be replaced
 ```bash
 podman run --rm -it --platform=linux/arm64 \
   -v "$PWD":/work:Z -w /work \
   -e JULIA_DEPOT_PATH=/home/pi/.julia \
   docker.io/library/julia:1.12 bash
-```
-with this:
-```bash
-podman run --rm -it --platform=linux/arm64 \
-  -v "$PWD":/work:Z -w /work \
-  -e JULIA_DEPOT_PATH=/home/pi/.julia \
-  julia-aarch64-build bash
 ```
 
 You're now in an emulated aarch64 shell — every command from here through
@@ -46,11 +38,15 @@ step 5 runs **inside the container**.
 
 ```bash
 mkdir -p /home/pi/.julia
-apt update && apt install -y gcc
+apt update && apt install -y gcc libpulse0
 ```
 
-`gcc` is needed because PackageCompiler links the sysimage with a C compiler,
-and the official `julia` image doesn't ship one.
+- `gcc` is needed because PackageCompiler links the sysimage with a C
+  compiler, and the official `julia` image doesn't ship one.
+- `libpulse0` is needed because WAV.jl resolves `libpulse-simple.so.0` via
+  `Libdl.find_library` at module load — the result gets baked into the
+  sysimage. Without it, the bound path is `""` and `pa_simple_new` fails on
+  the Pi. See "Notes & gotchas" for the general pattern.
 
 Optional but worth it if you'll iterate — commit this state to a reusable
 image so you don't redo apt every session. From the **🖥️ HOST**, in another
@@ -63,12 +59,10 @@ podman commit <id> julia-aarch64-build
 
 Future runs use `julia-aarch64-build` instead of `docker.io/library/julia:1.12`.
 
-NOTE: I have done this!
-
 ## 3. Instantiate the project — 📦 CONTAINER
 
 ```bash
-cd # where you'll have down access to both a Project.toml file as well as the Dizzy.jl folder
+cd /work/path/to/your/project            # the dir with Project.toml
 julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
 julia --project=. -e 'using Pkg; Pkg.add("PackageCompiler")'
 ```
@@ -105,7 +99,7 @@ every build.
 ## 5. Build the sysimage — 📦 CONTAINER
 
 ```bash
-julia -tauto --project=. -e '
+julia --project=. -e '
 using PackageCompiler
 create_sysimage(["Dizzy"];
     cpu_target = "cortex-a72",
@@ -139,7 +133,7 @@ julia --project=/path/to/project -e 'using Pkg; Pkg.instantiate()'
 Then run with the sysimage:
 
 ```bash
-julia --sysimage=dizzy/DizzyPrecompiled.so --project=dizzy/Project.toml -tauto
+julia --sysimage=/path/to/project/DizzyPrecompiled.so --project=/path/to/project
 ```
 
 `using Dizzy` should be near-instant.
@@ -156,6 +150,13 @@ julia --sysimage=dizzy/DizzyPrecompiled.so --project=dizzy/Project.toml -tauto
 - **`stmts.jl` is hardware-aware.** Anything that doesn't run during the trace
   pass on the Pi won't get precompiled. Make sure your trace exercises
   representative code paths.
-- The container is ephemeral; without a committed image, gcc and the depot
-  disappear when you `exit`. Use the `podman commit` step in §2, or accept
-  the rebuild cost.
+- **Runtime C libraries that are `find_library`'d at module load** (PulseAudio
+  for WAV.jl, possibly others) must be installed in the container too, or
+  their bound paths get baked in as `""` and `ccall`s fail on the Pi with
+  `undefined symbol: ...` pointing at the julia binary itself. Install the
+  same `lib*` apt packages in the container as on the Pi. If you hit a new
+  `undefined symbol` after deploying, identify which library exports that
+  symbol and apt-install it in the container, then rebuild.
+- The container is ephemeral; without a committed image, gcc, libpulse0,
+  and the depot disappear when you `exit`. Use the `podman commit` step in
+  §2, or accept the rebuild cost.

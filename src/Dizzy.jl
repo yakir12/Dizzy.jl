@@ -33,10 +33,13 @@ function open_correct_arduino()
         temp_sp = open(sp_name, 115200)
         write(temp_sp, cobs_encode(UInt8[1]))
         sleep(0.1)
-        id = cobs_decode(read(temp_sp))
-        if id == ARDUINO_ID
-            sp[] = temp_sp
-            return nothing
+        msg = read(temp_sp)
+        if !isempty(msg)
+            id = cobs_decode(msg)
+            if id == ARDUINO_ID
+                sp[] = temp_sp
+                return nothing
+            end
         end
         close(temp_sp)
         @info "Tried $sp_name... It wasn't the Dizzy arduino."

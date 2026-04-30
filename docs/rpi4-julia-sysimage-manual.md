@@ -105,7 +105,7 @@ every build.
 ## 5. Build the sysimage — 📦 CONTAINER
 
 ```bash
-julia --project=. -e '
+julia -tauto --project=. -e '
 using PackageCompiler
 create_sysimage(["Dizzy"];
     cpu_target = "cortex-a72",
@@ -139,7 +139,7 @@ julia --project=/path/to/project -e 'using Pkg; Pkg.instantiate()'
 Then run with the sysimage:
 
 ```bash
-julia --sysimage=/path/to/project/DizzyPrecompiled.so --project=/path/to/project
+julia --sysimage=dizzy/DizzyPrecompiled.so --project=dizzy/Project.toml -tauto
 ```
 
 `using Dizzy` should be near-instant.

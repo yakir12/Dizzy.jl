@@ -24,8 +24,9 @@ file = joinpath(@__DIR__, "setups.json")
 
 setups, available_setups = Dizzy.file2setups(file)
 
-Dizzy.open_sp!()
+Dizzy.open_correct_arduino()
 session = Dizzy.Session(setups['0'])
+println("ready…")
 haskey(setups, '1')
 haskey(setups, 't')
 for c in keys(setups)

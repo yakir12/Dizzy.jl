@@ -18,14 +18,14 @@ Each LED represents a discrete azimuth position on the ring. Position 0° points
 
 ### Setups
 
-A **setup** is a named lighting configuration. You define up to 9 setups in a JSON file (one per number key `1`–`9`). Three built-in setups are always available:
+A **setup** is a named lighting configuration. You define up to 26 setups in a JSON file (one per letter key `a`–`z`). Three built-in setups are always available:
 
 | Key | Behaviour |
 |-----|-----------|
 | `0` | All LEDs off |
-| `s` | All 198 LEDs on, blinking in sync every 1 second |
-| `r` | Random positions, intensities, and timings |
-| `q` | Quit |
+| `1` | All 198 LEDs on, blinking in sync every 1 second |
+| `2` | Random positions, intensities, and timings |
+| `3` | Quit |
 
 ### Suns
 
@@ -80,7 +80,7 @@ load_start("/path/to/setups.json")   # or specify a path
 load_start(; sound = true)   # or with sound cues for each keyboard press
 ```
 
-Dizzy opens the serial port, loads your setups, and prints `ready…`. Press `1`–`9` to activate a setup, `0` to turn all LEDs off, or `q` to quit.
+Dizzy opens the serial port, loads your setups, and prints `ready…`. Press `a`–`z` to activate a setup, `0` to turn all LEDs off, or `3` to quit.
 
 ### 4. Logging
 

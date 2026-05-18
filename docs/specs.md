@@ -1,12 +1,12 @@
 # setups.json Specification
 
-`setups.json` defines the LED configurations available at runtime. Each configuration is called a **setup** and is activated by pressing a number key (`1`–`9`).
+`setups.json` defines the LED configurations available at runtime. Each configuration is called a **setup** and is activated by pressing a letter key (`a`–`z`).
 
 ---
 
 ## Top-level structure
 
-The file is a JSON **array** of setup objects. You need at least 1 and at most 9 setups (one per number key `1`–`9`, assigned in order).
+The file is a JSON **array** of setup objects. You need at least 1 and at most 26 setups (one per letter key `a`–`z`, assigned in order).
 
 ```json
 [
@@ -38,7 +38,7 @@ Each entry in `suns` represents one light source aimed at a fixed angular positi
 
 | Field          | Type    | Default | Description |
 |----------------|---------|---------|-------------|
-| `mu`           | number  | —       | **Required.** Angular position in degrees. Range: `[-180, 180)`. 0 = top, 90 = right, -90 = left, -180 = bottom. |
+| `mu`           | number  | —       | **Required.** Angular position in degrees. Range: `[-180, 180)`. 0 = north, -90 = east, 90 = west, ±180 = south. |
 | `green`        | integer | `255`   | Brightness (1–255). |
 | `int_interval` | number  | Inf     | Blink period in seconds. Minimum 0.01; must be a multiple of 0.01. If set, the light toggles on/off repeatedly. |
 | `int_delay`    | number  | `0`     | Seconds to wait before the first blink toggle. Must be a multiple of 0.01. Requires `int_interval`. |
@@ -203,9 +203,9 @@ Unknown fields are rejected. Check for typos in field names.
 {"mu": 0, "int_interval": 1.0}  // correct
 ```
 
-### At most 9 setups
+### At most 26 setups
 
-Only the keys `1`–`9` are available (9 keys). A 10th setup would be silently unreachable even if the schema allowed it, so the schema rejects it outright.
+Only the keys `a`–`z` are available (26 keys). A 27th setup would be silently unreachable even if the schema allowed it, so the schema rejects it outright.
 
 ### Setup name must not be empty
 

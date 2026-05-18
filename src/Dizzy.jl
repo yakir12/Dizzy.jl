@@ -203,13 +203,13 @@ function file2setups(file)
     if !isnothing(res)
         error(res)
     end
-    setups = Dict(zip('1':'9', StructUtils.make(Vector{Setup}, pre_setups)))
+    setups = Dict(zip('a':'z', StructUtils.make(Vector{Setup}, pre_setups)))
     available_setups = ["$k: $(setup.name)" for (k, setup) in setups]
     sort!(available_setups, by = first)
 
     setups['0'] = Setup("off", [JSUN(index2α(i - 1), 0x00) for i in 1:NLEDS])
-    setups['s'] = Setup("sync", [JSUN(index2α(i - 1), 0xff, 0, 1) for i in 1:NLEDS])
-    setups['r'] = Setup("rand", [JSUN(rand(-180:180), rand(UInt8), max.(round.(rand(5), digits=2), 0.01)...) for _ in 1:NLEDS])
+    setups['1'] = Setup("sync", [JSUN(index2α(i - 1), 0xff, 0, 1) for i in 1:NLEDS])
+    setups['2'] = Setup("rand", [JSUN(rand(-180:180), rand(UInt8), max.(round.(rand(5), digits=2), 0.01)...) for _ in 1:NLEDS])
 
     return setups, available_setups
 end
@@ -224,7 +224,7 @@ function load_start(file = joinpath(homedir(), "setups.json"); sound = false)
         if haskey(setups, c)
             session = switch(session, setups[c])
             sound && Threads.@spawn beep(1)
-        elseif c == 'q'
+        elseif c == '3'
             switch(session, setups['0'])
             off(session)
             println("exiting")

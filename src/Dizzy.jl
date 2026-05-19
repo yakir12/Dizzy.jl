@@ -16,6 +16,12 @@ const ARDUINO_ID = UInt8[151, 152, 146, 82, 39, 59, 146, 254]
 
 const NLEDS = 198
 
+const cursed = Dict{UInt8, Tuple{UInt8, UInt8}}(23 => (22, 25), 24 => (22, 25),
+                                                74 => (73, 75), 
+                                                121 => (120, 123), 122 => (120, 123),
+                                                173 => (172, 175), 174 => (172, 175))
+
+
 const schema = Schema(read(joinpath(@__DIR__, "schema.json"), String))
 
 const sp = Ref{SerialPort}()
@@ -87,8 +93,10 @@ struct Azimuth <: Operation
     end
 end
 
+fix_azimuth(i) = haskey(cursed, i) ? rand(cursed[i]) : i
+
 function update!(suns, op::Azimuth)
-    suns[op.index].azimuth = α2index(rand(op.dist))
+    suns[op.index].azimuth = fix_azimuth(α2index(rand(op.dist)))
 end
 
 function update!(suns, op::Intensity)
@@ -102,7 +110,7 @@ end
 
 function Session(setup::Setup)
     jsuns = setup.suns
-    suns = [Sun(α2index(deg2rad(jsun.mu)), jsun.green) for jsun in jsuns]
+    suns = [Sun(fix_azimuth(α2index(deg2rad(jsun.mu))), jsun.green) for jsun in jsuns]
     running = Ref(true)
     task = Threads.@spawn begin
         last_t = 0.0

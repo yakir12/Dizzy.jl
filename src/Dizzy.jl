@@ -30,29 +30,53 @@ function close_sp!()
     isassigned(sp) && isopen(sp[]) && close(sp[])
 end
 
-function open_correct_arduino()
-    sp_names = get_port_list()
-    if isempty(sp_names)
-        error("no serial ports found, make sure the USB is plugged in.")
+function safe_open(sp_name, baudrate)
+    for i in 1:5
+        try
+            return open(sp_name, baudrate)
+        catch ex
+            @info "(attempt $i) failed to open serial port $sp_name with:" ex
+        end
+        sleep(0.1)
     end
-    for sp_name in sp_names
-        temp_sp = open(sp_name, 115200)
+    return nothing
+end
+
+verify_sp(::Nothing) = false
+
+function verify_sp(temp_sp)
+    try
         write(temp_sp, cobs_encode(UInt8[1]))
         sleep(0.1)
         msg = read(temp_sp)
         if !isempty(msg)
             id = cobs_decode(msg)
             if id == ARDUINO_ID
-                sp[] = temp_sp
-                return nothing
+                return true
             end
         end
-        close(temp_sp)
+        return false
+    catch ex
+        return false
+    end
+end
+
+function open_correct_arduino()
+    sp_names = get_port_list()
+    if isempty(sp_names)
+        error("no serial ports found, make sure the USB is plugged in.")
+    end
+    for sp_name in sp_names
+        temp_sp = safe_open(sp_name, 115200)
+        if verify_sp(temp_sp)
+            sp[] = temp_sp
+            return nothing
+        end
+        isnothing(temp_sp) || close(temp_sp)
         @info "Tried $sp_name... It wasn't the Dizzy arduino."
     end
     error("the dizzy arduino is not plugged in")
 end
-
 
 mutable struct Sun
     azimuth::UInt8
